@@ -1,5 +1,6 @@
 import mysql.connector
 import logging
+from typing import List
 import random
 import hashlib
 
@@ -20,7 +21,6 @@ class DB:
         self.cnx = mysql.connector.connect(user=user, password=password,
                                            host=host, database=database)
         self.cursor = self.cnx.cursor()
-        logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
     
     def daftar_akun(self, nama_lengkap: str, email: str, nik: int, pin: int) -> bool:
         """Fungsi ini untuk mendaftarkan akun pengguna ke dalam database.
@@ -80,3 +80,64 @@ class DB:
         """
         pin_encrypt = hashlib.sha256(str(pin).encode("utf-8")).hexdigest()
         return pin_encrypt
+
+    
+    def mendapatkan_akun(self, email: str) -> List:
+        try:
+            sql = "SELECT * FROM akun WHERE email= %s"
+            self.cursor.execute(sql, (email,))
+            results = self.cursor.fetchone()
+            return results
+        except mysql.connector.Error as err:
+            logging.error("Error: %s" % err)
+            return []
+    
+    
+    def update_rekening(self, id_akun: int, nomor_rekening: int, saldo: int) -> bool:
+        """Fungsi untuk mengupdate rekening
+
+        Args:
+            nomor_rekening (int): nomor rekening
+            saldo (int): saldo
+
+        Returns:
+            bool: _description_
+        """
+        try:
+            sql = "UPDATE rekening SET nomor_rekening=%s, saldo=%s WHERE id_akun=%s"
+            self.cursor.execute(sql, (nomor_rekening, saldo, id_akun))
+            self.cnx.commit()
+            
+            if self.cursor.rowcount > 0:
+                logging.info("Update rekening berhasil")
+                return True
+            else:
+                logging.error("Update rekening gagal")
+                return False
+        except mysql.connector.Error as err:
+            logging.error("Update rekening gagal: %s" % err)
+            return False
+    
+    
+    def mendapatkan_rekening(self, id_akun: int = None, nomor_rekening: int = None) -> List:
+        """Fungsi untuk mendapatkan info rekening.
+
+        Args:
+            id_akun (int): id akun pengguna
+
+        Returns:
+            List: _description_
+        """
+        try:
+            if id_akun is None:
+                sql = "SELECT * FROM rekening WHERE nomor_rekening=%s"
+                self.cursor.execute(sql, (nomor_rekening,))
+            else:
+                sql = "SELECT * FROM rekening WHERE id_akun=%s"
+                self.cursor.execute(sql, (id_akun,))
+            results = self.cursor.fetchone()
+            
+            return results
+        except mysql.connector.Error as err:
+            logging.error("Mysql Error get rekening: %s" % err)
+            return []
